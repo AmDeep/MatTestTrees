@@ -1,0 +1,93 @@
+% Initialize the master node
+masterNode = [startX, startY];
+tree = masterNode;
+
+% Initialize the slave nodes
+slaveNodes = cell(1, 5);
+for i = 1:5
+    slaveNodes{i} = [startX, startY];
+end
+
+% Set the maximum number of iterations
+maxIterations = 1000;
+
+% Set the step size
+stepSize = 10;
+
+% Set the goal node
+goalNode = [goalX, goalY];
+
+% RRT algorithm
+for iteration = 1:maxIterations
+    % Generate a random node
+    randomNode = [randi([1, maxX]), randi([1, maxY])];
+    
+    % Find the nearest node in the tree
+    [nearestNode, nearestIndex] = findNearestNode(randomNode, tree);
+    
+    % Steer towards the random node
+    newNode = steer(nearestNode, randomNode, stepSize);
+    
+    % Check for collision with obstacles
+    if ~collisionCheck(nearestNode, newNode, obstacles)
+        % Add the new node to the tree
+        tree = [tree; newNode];
+        
+        % Update the nearest slave node
+        slaveIndex = mod(iteration, 5) + 1;
+        slaveNodes{slaveIndex} = newNode;
+        
+        % Check if reached the goal
+        if norm(newNode - goalNode) < stepSize
+            % Path found
+            path = getPath(tree, nearestIndex, size(tree, 1));
+            break;
+        end
+    end
+end
+
+% Find the nearest node in the tree
+function [nearestNode, nearestIndex] = findNearestNode(randomNode, tree)
+    distances = vecnorm(tree - randomNode, 2, 2);
+    [minDistance, nearestIndex] = min(distances);
+    nearestNode = tree(nearestIndex, :);
+end
+
+% Steer towards the random node
+function newNode = steer(nearestNode, randomNode, stepSize)
+    direction = (randomNode - nearestNode) / norm(randomNode - nearestNode);
+    newNode = nearestNode + stepSize * direction;
+end
+
+% Check for collision with obstacles
+function collision = collisionCheck(nearestNode, newNode, obstacles)
+    collision = false;
+    for i = 1:size(obstacles, 1)
+        obstacle = obstacles(i, :);
+        if norm(newNode - obstacle) < norm(nearestNode - obstacle)
+            collision = true;
+            break;
+        end
+    end
+end
+
+% Get the path from the tree
+function path = getPath(tree, startIndex, endIndex)
+    path = tree(endIndex, :);
+    while endIndex ~= startIndex
+        path = [tree(endIndex, :); path];
+        endIndex = tree(endIndex, 3); % Parent index
+    end
+end
+
+% Example usage
+startX = 0;
+startY = 0;
+goalX = 100;
+goalY = 100;
+maxX = 200;
+maxY = 200;
+obstacles = [50, 50; 60, 60; 70, 70];
+
+path = rrtAlgorithm(startX, startY, goalX, goalY, maxX, maxY, obstacles);
+disp(path);
